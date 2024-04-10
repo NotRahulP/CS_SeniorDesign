@@ -9,10 +9,23 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
+import requests
+from io import BytesIO
 
 load_dotenv()
 os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
+pdf_files = [
+    "ch1-unix-programming.pdf",
+    "test-syllabus.pdf"
+]
+
+def get_absolute_paths(relative_paths):
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    absolute_paths = [os.path.join(script_dir, path) for path in relative_paths]
+    return absolute_paths
+
 
 # read all pdf files and return text
 
@@ -24,6 +37,7 @@ def get_pdf_text(pdf_docs):
         for page in pdf_reader.pages:
             text += page.extract_text()
     return text
+
 
 # split text into chunks
 
@@ -92,18 +106,12 @@ def main():
         page_icon="🤖"
     )
 
-    # Sidebar for uploading PDF files
-    with st.sidebar:
-        st.title("Menu:")
-        pdf_docs = st.file_uploader(
-            "Upload your PDF Files and Click on the Submit & Process Button", accept_multiple_files=True)
-        if st.button("Submit & Process"):
-            with st.spinner("Processing..."):
-                raw_text = get_pdf_text(pdf_docs)
-                text_chunks = get_text_chunks(raw_text)
-                get_vector_store(text_chunks)
-                st.success("Done")
-
+    absolute_pdf_paths = get_absolute_paths(pdf_files)
+    raw_text = get_pdf_text(absolute_pdf_paths)
+    text_chunks = get_text_chunks(raw_text)
+    get_vector_store(text_chunks)
+    
+   
     # Main content area for displaying chat messages
     st.title("Chat with PDF files using Gemini🤖")
     st.write("Welcome to the chat!")
