@@ -4,7 +4,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import streamlit as st
 import google.generativeai as genai
-from langchain.vectorstores import FAISS
+from langchain_community.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
@@ -16,8 +16,9 @@ load_dotenv()
 os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
+
 pdf_files = [
-    "ch1-unix-programming.pdf",
+    # "ch1-java.pdf",
     "test-syllabus.pdf"
 ]
 
@@ -28,8 +29,6 @@ def get_absolute_paths(relative_paths):
 
 
 # read all pdf files and return text
-
-
 def get_pdf_text(pdf_docs):
     text = ""
     for pdf in pdf_docs:
@@ -40,18 +39,15 @@ def get_pdf_text(pdf_docs):
 
 
 # split text into chunks
-
-
 def get_text_chunks(text):
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=10000, chunk_overlap=1000)
     chunks = splitter.split_text(text)
     return chunks  # list of strings
 
+
 # get embeddings for each chunk
-
-
-def get_vector_store(chunks):
+def make_vector_store(chunks):
     embeddings = GoogleGenerativeAIEmbeddings(
         model="models/embedding-001")  # type: ignore
     vector_store = FAISS.from_texts(chunks, embedding=embeddings)
@@ -60,9 +56,10 @@ def get_vector_store(chunks):
 
 def get_conversational_chain():
     prompt_template = """
+    You are a teacher's assistant for a course about Java programming. You will be asked questions about Java programming and the course logistics.
     Answer the question as detailed as possible from the provided context, make sure to provide all the details, if the answer is not in
-    the provided context just say, "Answer is not available in the context", don't provide the wrong answer. Make sure your answer is 
-    grammatically correct.\n\n
+    the provided context just say, "Answer is not available in the context", but do not provide an incorrect answer or make up an answer. Make sure your answer is 
+    grammatically correct and complete sentences. \n\n
     Context:\n {context}?\n
     Question: \n{question}\n
 
@@ -90,6 +87,7 @@ def user_input(user_question):
 
     new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True) 
     docs = new_db.similarity_search(user_question)
+    print(docs)
 
     chain = get_conversational_chain()
 
@@ -101,17 +99,20 @@ def user_input(user_question):
 
 
 def main():
+    absolute_pdf_paths = get_absolute_paths(pdf_files)
+    raw_text = get_pdf_text(absolute_pdf_paths)
+    text_chunks = get_text_chunks(raw_text)
+    make_vector_store(text_chunks)
+
     st.set_page_config(
         page_title="Gemini PDF Chatbot",
         page_icon="🤖"
     )
-
-    absolute_pdf_paths = get_absolute_paths(pdf_files)
-    raw_text = get_pdf_text(absolute_pdf_paths)
-    text_chunks = get_text_chunks(raw_text)
-    get_vector_store(text_chunks)
-    
    
+    # Sidebar for uploading PDF files
+    with st.sidebar:
+        st.title("Menu:")
+
     # Main content area for displaying chat messages
     st.title("Chat with PDF files using Gemini🤖")
     st.write("Welcome to the chat!")
@@ -119,7 +120,6 @@ def main():
 
     # Chat input
     # Placeholder for chat messages
-
     if "messages" not in st.session_state.keys():
         st.session_state.messages = [
             {"role": "assistant", "content": "upload some pdfs and ask me a question"}]
