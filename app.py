@@ -47,8 +47,7 @@ def get_vector_store(chunks):
 def get_conversational_chain():
     prompt_template = """
     Answer the question as detailed as possible from the provided context, make sure to provide all the details, if the answer is not in
-    the provided context just say, "Answer is not available in the context", don't provide the wrong answer. Make sure your answer is 
-    grammatically correct.\n\n
+    provided context just say, "answer is not available in the context", don't provide the wrong answer\n\n
     Context:\n {context}?\n
     Question: \n{question}\n
 
@@ -67,7 +66,7 @@ def get_conversational_chain():
 
 def clear_chat_history():
     st.session_state.messages = [
-        {"role": "assistant", "content": "Ask me any questions about the course!"}]
+        {"role": "assistant", "content": "upload some pdfs and ask me a question"}]
 
 
 def user_input(user_question):
@@ -86,14 +85,41 @@ def user_input(user_question):
     return response
 
 
+
+
+gradient_text_html = """
+<style>
+.gradient-text {
+    font-weight: bold;
+    background: -webkit-linear-gradient(left, red, blue);
+    background: linear-gradient(to right, #ffa745, #fe869f,#ef7ac8, #a083ed, #43aeff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline;
+    font-size: 3em;
+}
+</style>
+<div class="gradient-text">Virtual TA Chatbot </div>
+"""
+
+
+
 def main():
     st.set_page_config(
-        page_title="Gemini PDF Chatbot",
-        page_icon="🤖"
+        page_title="Virtual TA Chatbot",
+        page_icon="📝"
     )
+    st.markdown(gradient_text_html, unsafe_allow_html=True)
+
+    st.caption("Welcome to the TA's office hours! The TA can answer questions about the course Intro to Unix Fundamentals.")
+
 
     # Sidebar for uploading PDF files
     with st.sidebar:
+        st.title("About the Chatbot")
+        st.markdown("This chatbot aims to assist students with course-related queries, provide explanations, offer resources, and facilitate discussions.")
+
+
         st.title("Menu:")
         pdf_docs = st.file_uploader(
             "Upload your PDF Files and Click on the Submit & Process Button", accept_multiple_files=True)
@@ -105,16 +131,14 @@ def main():
                 st.success("Done")
 
     # Main content area for displaying chat messages
-    st.title("Chat with PDF files using Gemini🤖")
-    st.write("Welcome to the chat!")
-    st.sidebar.button('Clear Chat History', on_click=clear_chat_history)
+    # st.sidebar.button('Clear Chat History', on_click=clear_chat_history)
 
     # Chat input
     # Placeholder for chat messages
 
     if "messages" not in st.session_state.keys():
         st.session_state.messages = [
-            {"role": "assistant", "content": "upload some pdfs and ask me a question"}]
+            {"role": "assistant", "content": "Ask me any questions about the course!"}]
 
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
@@ -139,6 +163,8 @@ def main():
         if response is not None:
             message = {"role": "assistant", "content": full_response}
             st.session_state.messages.append(message)
+
+    
 
 
 if __name__ == "__main__":
