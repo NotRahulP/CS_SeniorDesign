@@ -4,17 +4,38 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import streamlit as st
 import google.generativeai as genai
+import pandas as pd
 from langchain.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
+from fpdf import FPDF
+import requests
+from io import BytesIO
+
+
 
 load_dotenv()
 os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
+
+pdf_files = [
+    "ch1-unix-programming.pdf",
+    "test-syllabus.pdf"
+]
+
+def get_absolute_paths(relative_paths):
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    absolute_paths = [os.path.join(script_dir, path) for path in relative_paths]
+    return absolute_paths
+
+
+
+
 # read all pdf files and return text
+
 
 
 def get_pdf_text(pdf_docs):
@@ -66,7 +87,12 @@ def get_conversational_chain():
 
 def clear_chat_history():
     st.session_state.messages = [
-        {"role": "assistant", "content": "upload some pdfs and ask me a question"}]
+        {"role": "assistant", "content": "Ask me any questions about the course!"}]
+
+
+def save_chat_history():
+    return 0
+
 
 
 def user_input(user_question):
@@ -109,26 +135,41 @@ def main():
         page_title="Virtual TA Chatbot",
         page_icon="📝"
     )
-    st.markdown(gradient_text_html, unsafe_allow_html=True)
 
+    absolute_pdf_paths = get_absolute_paths(pdf_files)
+    raw_text = get_pdf_text(absolute_pdf_paths)
+    text_chunks = get_text_chunks(raw_text)
+    get_vector_store(text_chunks)
+
+    st.markdown(gradient_text_html, unsafe_allow_html=True)
     st.caption("Welcome to the TA's office hours! The TA can answer questions about the course Intro to Unix Fundamentals.")
 
 
-    # Sidebar for uploading PDF files
+    # Sidebar
     with st.sidebar:
         st.title("About the Chatbot")
         st.markdown("This chatbot aims to assist students with course-related queries, provide explanations, offer resources, and facilitate discussions.")
 
+        st.divider()
 
-        st.title("Menu:")
-        pdf_docs = st.file_uploader(
-            "Upload your PDF Files and Click on the Submit & Process Button", accept_multiple_files=True)
-        if st.button("Submit & Process"):
-            with st.spinner("Processing..."):
-                raw_text = get_pdf_text(pdf_docs)
-                text_chunks = get_text_chunks(raw_text)
-                get_vector_store(text_chunks)
-                st.success("Done")
+        st.title("Chat Menu")
+        st.markdown("Use the buttons below to clear your chatbot history or save your chatbot history.")
+        col1, col2 = st.columns([1,1])
+        with col1:
+            st.button('Clear History', on_click=clear_chat_history)
+        with col2:
+            st.button('Save History', on_click=save_chat_history)
+
+
+        st.divider()
+
+        st.title("Disclaimer")
+        st.caption("*Please use this TA chatbot responsibly. Asking for answers to assignments, homework, or exams is strictly prohibited.*")
+
+
+
+        
+        
 
     # Main content area for displaying chat messages
     # st.sidebar.button('Clear Chat History', on_click=clear_chat_history)
