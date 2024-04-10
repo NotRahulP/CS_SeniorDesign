@@ -40,7 +40,7 @@ def get_conversational_chain():
 
 def clear_chat_history():
     st.session_state.messages = [
-        {"role": "assistant", "content": "Ask me any questions about the course!"}]
+        {"role": "assistant", "content": "Hi there! How can I help you?"}]
 
 
 def save_chat_history():
@@ -73,12 +73,16 @@ gradient_text_html = """
 <div class="gradient-text">Virtual TA Chatbot </div>
 """
 
+def load_databases(db_type):
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    faiss_db = FAISS.load_local(f"faiss-index-{db_type}", embeddings, allow_dangerous_deserialization=True) 
+    return faiss_db
 
 
 def main():
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-    db_type = "test-syllabus"
-    faiss_db = FAISS.load_local(f"faiss-index-{db_type}", embeddings, allow_dangerous_deserialization=True) 
+    # Load both syllabus and content databases
+    syll_faiss_db = load_databases("test-syllabus")
+    textbook_faiss_db = load_databases("ch1-java")
 
     st.set_page_config(
         page_title="Virtual TA Chatbot",
@@ -97,6 +101,20 @@ def main():
         st.divider()
 
         st.title("Chat Menu")
+        st.markdown("Use the buttons below to select whether you would like to ask questions about the course syllabus or course content.")
+        selected_db = st.radio(
+            label = "Knowledge base selection",
+            options = ["Syllabus", "Content"],
+            index = 0,
+            captions = [
+                "Ask about course timing, location, office hours, due date, and grade breakdowns.",
+                "Ask about any course content from the assigned class textbook."
+            ],
+            label_visibility = "collapsed"
+        )
+
+        st.divider()
+
         st.markdown("Use the buttons below to clear your chatbot history or save your chatbot history.")
         col1, col2 = st.columns([1,1])
         with col1:
@@ -118,13 +136,13 @@ def main():
 
     if "messages" not in st.session_state.keys():
         st.session_state.messages = [
-            {"role": "assistant", "content": "Ask me any questions about the course!"}]
+            {"role": "assistant", "content": "Hi there! How can I help you?"}]
 
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.write(message["content"])
 
-    if prompt := st.chat_input():
+    if prompt := st.chat_input("Ask me any questions about the course!"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.write(prompt)
@@ -133,6 +151,10 @@ def main():
     if st.session_state.messages[-1]["role"] != "assistant":
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
+                if selected_db == "Content":
+                    faiss_db = textbook_faiss_db
+                else:
+                    faiss_db = syll_faiss_db
                 response = user_input(prompt, faiss_db)
                 placeholder = st.empty()
                 full_response = ''
@@ -145,7 +167,6 @@ def main():
             st.session_state.messages.append(message)
 
     
-
 
 if __name__ == "__main__":
     main()
