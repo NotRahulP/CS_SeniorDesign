@@ -9,6 +9,11 @@ from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
 from fpdf import FPDF
+import base64
+
+
+
+
 
 
 load_dotenv()
@@ -41,10 +46,39 @@ def get_conversational_chain():
 def clear_chat_history():
     st.session_state.messages = [
         {"role": "assistant", "content": "Hi there! How can I help you?"}]
+    f = open("Chat_History.txt", "w")
+    f.close()
+
+
+def format_chat_history(message):
+    chat_string = ""
+    role = message["role"]
+    content = message["content"]
+    chat_string += f"{role.capitalize()}: {content}\n"
+    return chat_string
+    master_array.append(chat_string)
+    
+
+
+def create_download_link(val, filename):
+    b64 = base64.b64encode(val)  # val looks like b'...'
+    return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{filename}.pdf">Download file</a>'
 
 
 def save_chat_history():
-    return 0
+    print("ok")
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font('Times', '', 12)
+
+    f = open("Chat_History.txt", "r")
+    for x in f: 
+        pdf.cell(50,5, txt = x, ln = 1, align = 'L') 
+    #pdf.cell(40, 10, "hello")
+
+    html = create_download_link(pdf.output(dest="S").encode("latin-1"), "test")
+    st.sidebar(html, unsafe_allow_html=True)
+
 
 
 def user_input(user_question, faiss_db):
@@ -146,6 +180,9 @@ def main():
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.write(prompt)
+        f = open("Chat_History.txt", "a")
+        f.write(format_chat_history(st.session_state.messages[-1]))
+        f.close()
 
     # Display chat messages and bot response
     if st.session_state.messages[-1]["role"] != "assistant":
@@ -165,6 +202,9 @@ def main():
         if response is not None:
             message = {"role": "assistant", "content": full_response}
             st.session_state.messages.append(message)
+        f = open("Chat_History.txt", "a")
+        f.write(format_chat_history(st.session_state.messages[-1]))
+        f.close()
 
     
 
