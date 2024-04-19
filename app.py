@@ -20,10 +20,11 @@ def get_conversational_chain():
     prompt_template = """
     You are a teacher's assistant for a course about Java programming. You will be asked questions about Java programming and the course logistics.
     Answer the question as detailed as possible from the provided context, make sure to provide all the details, if the answer is not in
-    the provided context just say, "Answer is not available in the context", but do not provide an incorrect answer or make up an answer. Make sure your answer is 
-    grammatically correct and complete sentences. \n\n
+    the provided context just say, "I'm sorry, I don't know the answer. Please contact johnblob@utd.edu with your question.", but do not provide an 
+    incorrect answer or make up an answer. Make sure your answer is grammatically correct, spelled correctly, and complete sentences. You may respond 
+    to greetings with greetings. \n\n
 
-    Context:\n {context}?\n
+    Context:\n {context}\n
     Question: \n{question}\n
 
     Answer:
@@ -53,7 +54,9 @@ def user_input(user_question, faiss_db):
     chain = get_conversational_chain()
 
     response = chain(
-        {"input_documents": docs, "question": user_question}, return_only_outputs=True, )
+        {"input_documents": docs, "question": user_question}, 
+        return_only_outputs=True, 
+        )
     print(response)
     return response
 
@@ -77,7 +80,6 @@ def load_databases(db_type):
     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
     faiss_db = FAISS.load_local(f"faiss-index-{db_type}", embeddings, allow_dangerous_deserialization=True) 
     return faiss_db
-
 
 def main():
     # Load both syllabus and content databases
@@ -128,11 +130,9 @@ def main():
         st.title("Disclaimer")
         st.caption("*Please use this TA chatbot responsibly. Asking for answers to assignments, homework, or exams is strictly prohibited.*")
 
-    # Main content area for displaying chat messages
-    # st.sidebar.button('Clear Chat History', on_click=clear_chat_history)
 
-    # Chat input
-    # Placeholder for chat messages
+
+    # Main content area for displaying chat messages
 
     if "messages" not in st.session_state.keys():
         st.session_state.messages = [
@@ -147,21 +147,21 @@ def main():
         with st.chat_message("user"):
             st.write(prompt)
 
-    # Display chat messages and bot response
-    if st.session_state.messages[-1]["role"] != "assistant":
+        if selected_db == "Content":
+            faiss_db = textbook_faiss_db
+        else:
+            faiss_db = syll_faiss_db
+        
+        with st.spinner("Thinking..."):
+            response = user_input(prompt, faiss_db)
+            full_response = ''
+            for item in response['output_text']:
+                full_response += item
+
         with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                if selected_db == "Content":
-                    faiss_db = textbook_faiss_db
-                else:
-                    faiss_db = syll_faiss_db
-                response = user_input(prompt, faiss_db)
-                placeholder = st.empty()
-                full_response = ''
-                for item in response['output_text']:
-                    full_response += item
-                    placeholder.markdown(full_response)
-                placeholder.markdown(full_response)
+            placeholder = st.empty()
+            placeholder.markdown(full_response)
+
         if response is not None:
             message = {"role": "assistant", "content": full_response}
             st.session_state.messages.append(message)
