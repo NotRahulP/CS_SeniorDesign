@@ -50,7 +50,7 @@ def make_vector_store(chunks, filename):
 def main():
     pdf_files = [
         "test-syllabus.pdf",
-        "ch1-java.pdf",
+        "java-book.pdf",
     ]
     for pdf in pdf_files:
         absolute_pdf_path = get_absolute_path(pdf)

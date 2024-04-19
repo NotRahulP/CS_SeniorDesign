@@ -84,7 +84,7 @@ def load_databases(db_type):
 def main():
     # Load both syllabus and content databases
     syll_faiss_db = load_databases("test-syllabus")
-    textbook_faiss_db = load_databases("ch1-java")
+    textbook_faiss_db = load_databases("java-book")
 
     st.set_page_config(
         page_title="Virtual TA Chatbot",
@@ -153,18 +153,19 @@ def main():
             faiss_db = syll_faiss_db
         
         with st.spinner("Thinking..."):
-            response = user_input(prompt, faiss_db)
-            full_response = ''
-            for item in response['output_text']:
-                full_response += item
-
+            try:
+                response = user_input(prompt, faiss_db)
+                full_response = ''
+                for item in response['output_text']:
+                    full_response += item
+            except genai.types.generation_types.StopCandidateException as e:
+                full_response = "I'm sorry, I cannot answer that. Please contact johnblob@utd.edu with your question."
+                print(e)
+                    
         with st.chat_message("assistant"):
             placeholder = st.empty()
             placeholder.markdown(full_response)
-
-        if response is not None:
-            message = {"role": "assistant", "content": full_response}
-            st.session_state.messages.append(message)
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
 
     
 
