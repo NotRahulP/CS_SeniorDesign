@@ -30,11 +30,13 @@ def get_pdf_text(pdf):
 
 
 # split text into chunks
-def get_text_chunks(text):
+def process_pdf(pdf_path):
+    text = get_pdf_text(pdf_path)
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=10000, chunk_overlap=1000)
-    chunks = splitter.split_text(text)
-    return chunks  # list of strings
+        chunk_size=10000, 
+        chunk_overlap=1000)
+    text_chunks = splitter.split_text(text)
+    return text_chunks  # list of strings
 
 
 # get embeddings for each chunk
@@ -52,8 +54,7 @@ def main():
     ]
     for pdf in pdf_files:
         absolute_pdf_path = get_absolute_path(pdf)
-        raw_text = get_pdf_text(absolute_pdf_path)
-        text_chunks = get_text_chunks(raw_text)
+        text_chunks = process_pdf(absolute_pdf_path)
         filename = f"faiss-index-{os.path.splitext(pdf)[0]}"  # Create new filename with prefix
         make_vector_store(text_chunks, filename)
           
