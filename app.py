@@ -130,6 +130,7 @@ def main():
 
     # Sidebar
     with st.sidebar:
+        st.image("https://brand.utdallas.edu/files/utd-bug.jpg", width=150)
         st.title("About the Chatbot")
         st.markdown("This chatbot aims to assist students with course-related queries, provide explanations, offer resources, and facilitate discussions.")
 
