@@ -70,14 +70,15 @@ def save_chat_history():
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font('Times', '', 12)
+    #pdf.multi_cell(50)
 
     f = open("Chat_History.txt", "r")
     for x in f: 
-        pdf.cell(50,5, txt = x, ln = 1, align = 'L') 
+        pdf.multi_cell(175,5, txt = x, align = 'L') 
     #pdf.cell(40, 10, "hello")
 
-    html = create_download_link(pdf.output(dest="S").encode("latin-1"), "test")
-    st.sidebar(html, unsafe_allow_html=True)
+    html = create_download_link(pdf.output(dest="S").encode("latin-1"), "chat_history")
+    st.markdown(html, unsafe_allow_html=True)
 
 
 
