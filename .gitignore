@@ -3,3 +3,4 @@ venv
 faiss-index*
 faiss_index
 __pycache__
+Chat_History.txt

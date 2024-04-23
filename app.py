@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 import google.generativeai as genai
-import pandas as pd
+import base64
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -15,7 +15,29 @@ load_dotenv()
 os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
+# CSS Formatting
+gradient_text_html = """
+<style>
+    .gradient-text {
+        font-weight: bold;
+        background: -webkit-linear-gradient(left, red, blue);
+        background: linear-gradient(to right, #ffa745, #fe869f,#ef7ac8, #a083ed, #43aeff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        display: inline;
+        font-size: 3em;
+    }
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 0rem;
+        padding-left: 5rem;
+        padding-right: 5rem;
+    }
+</style>
+<div class="gradient-text">Virtual TA Chatbot </div>
+"""
 
+# Build conversational chain with question and prompt
 def get_conversational_chain():
     prompt_template = """
     You are a teacher's assistant for a course about Java programming. You will be asked questions about Java programming and the course logistics.
@@ -39,15 +61,7 @@ def get_conversational_chain():
     return chain
 
 
-def clear_chat_history():
-    st.session_state.messages = [
-        {"role": "assistant", "content": "Hi there! How can I help you?"}]
-
-
-def save_chat_history():
-    return 0
-
-
+# Get user input and search for similar pages in FAISS database
 def user_input(user_question, faiss_db):
     docs = faiss_db.similarity_search(user_question)
     print(docs)
@@ -61,44 +75,76 @@ def user_input(user_question, faiss_db):
     return response
 
 
-gradient_text_html = """
-<style>
-.gradient-text {
-    font-weight: bold;
-    background: -webkit-linear-gradient(left, red, blue);
-    background: linear-gradient(to right, #ffa745, #fe869f,#ef7ac8, #a083ed, #43aeff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    display: inline;
-    font-size: 3em;
-}
-</style>
-<div class="gradient-text">Virtual TA Chatbot </div>
-"""
-
+# Load FAISS database
 def load_databases(db_type):
     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
     faiss_db = FAISS.load_local(f"faiss-index-{db_type}", embeddings, allow_dangerous_deserialization=True) 
     return faiss_db
+
+
+# Clear chat history and reset chat history file
+def clear_chat_history():
+    st.session_state.messages = [
+        {"role": "assistant", "content": "Hi there! How can I help you?"}]
+    f = open("Chat_History.txt", "w")
+    f.close()
+    write_chat(st.session_state.messages[-1])
+
+
+# Format chat history text file
+def format_chat_history(message):
+    chat_string = ""
+    role = message["role"]
+    content = message["content"]
+    chat_string += f"{role.capitalize()}: {content}\n"
+    return chat_string
+
+
+# Record the last chat in the text file
+def write_chat(msg):
+    f = open("Chat_History.txt", "a")
+    f.write(format_chat_history(msg))
+    f.close()
+
+
+# Save chat history in pdf file
+def save_chat_history():
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font('Times', '', 12)
+
+    f = open("Chat_History.txt", "r")
+    for x in f: 
+        pdf.multi_cell(175,5, txt = x, align = 'L') 
+
+    pdf_content = pdf.output(dest="S").encode("latin-1")  # Generate PDF data
+    f.close()
+    return pdf_content
+
 
 def main():
     # Load both syllabus and content databases
     syll_faiss_db = load_databases("test-syllabus")
     textbook_faiss_db = load_databases("java-book")
 
+    # Set webpage tab title and icon
     st.set_page_config(
         page_title="Virtual TA Chatbot",
         page_icon="📝"
     )
 
+    # Display page title and caption
     st.markdown(gradient_text_html, unsafe_allow_html=True)
     st.caption("Welcome to the TA's office hours! The TA can answer questions about the course Intro to Unix Fundamentals.")
 
 
     # Sidebar
     with st.sidebar:
-        st.title("About the Chatbot")
-        st.markdown("This chatbot aims to assist students with course-related queries, provide explanations, offer resources, and facilitate discussions.")
+        col1, col2 = st.columns([1,2])
+        with col1:
+            st.image("https://brand.utdallas.edu/files/utd-bug.jpg", width=150)
+        with col2:
+            st.markdown("This chatbot aims to assist students with course-related queries, provide explanations, offer resources, and facilitate discussions.")
 
         st.divider()
 
@@ -117,13 +163,11 @@ def main():
 
         st.divider()
 
-        st.markdown("Use the buttons below to clear your chatbot history or save your chatbot history.")
         col1, col2 = st.columns([1,1])
         with col1:
-            st.button('Clear History', on_click=clear_chat_history)
+            st.button('Clear Chat History', on_click=clear_chat_history)
         with col2:
-            st.button('Save History', on_click=save_chat_history)
-
+            st.download_button(label="Download Chat History", data=save_chat_history(), file_name="chat_history.pdf")
 
         st.divider()
 
@@ -131,12 +175,10 @@ def main():
         st.caption("*Please use this TA chatbot responsibly. Asking for answers to assignments, homework, or exams is strictly prohibited.*")
 
 
-
     # Main content area for displaying chat messages
-
     if "messages" not in st.session_state.keys():
-        st.session_state.messages = [
-            {"role": "assistant", "content": "Hi there! How can I help you?"}]
+        st.session_state.messages = [{"role": "assistant", "content": "Hi there! How can I help you?"}]
+        write_chat(st.session_state.messages[-1])
 
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
@@ -144,6 +186,7 @@ def main():
 
     if prompt := st.chat_input("Ask me any questions about the course!"):
         st.session_state.messages.append({"role": "user", "content": prompt})
+        write_chat(st.session_state.messages[-1])
         with st.chat_message("user"):
             st.write(prompt)
 
@@ -166,8 +209,8 @@ def main():
             placeholder = st.empty()
             placeholder.markdown(full_response)
         st.session_state.messages.append({"role": "assistant", "content": full_response})
+        write_chat(st.session_state.messages[-1])
 
-    
 
 if __name__ == "__main__":
     main()
