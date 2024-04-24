@@ -124,7 +124,7 @@ def save_chat_history():
 
 def main():
     # Load both syllabus and content databases
-    syll_faiss_db = load_databases("test-syllabus")
+    syll_faiss_db = load_databases("java-syllabus")
     textbook_faiss_db = load_databases("java-book")
 
     # Set webpage tab title and icon

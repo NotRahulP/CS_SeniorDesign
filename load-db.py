@@ -47,7 +47,7 @@ def make_vector_store(chunks, filename):
 
 def main():
     pdf_files = [
-        "test-syllabus.pdf",
+        "java-syllabus.pdf",
         "java-book.pdf",
     ]
     for pdf in pdf_files:
